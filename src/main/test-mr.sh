@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 #
 # map-reduce tests
@@ -99,6 +99,8 @@ fi
 
 # wait for remaining workers and coordinator to exit.
 wait
+
+#exit
 
 #########################################################
 # now indexer
