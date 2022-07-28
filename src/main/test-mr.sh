@@ -296,32 +296,35 @@ $TIMEOUT ../mrworker ../../mrapps/crash.so &
 # mimic rpc.go's coordinatorSock()
 SOCKNAME=/var/tmp/824-mr-`id -u`
 
-# ( while [ -e $SOCKNAME -a ! -f mr-done ]
-#   do
-#     $TIMEOUT ../mrworker ../../mrapps/crash.so
-#     sleep 1
-#   done ) &
+( while [ -e $SOCKNAME -a ! -f mr-done ]
+  do
+    $TIMEOUT ../mrworker ../../mrapps/crash.so
+    sleep 1
+  done ) &
 
-# ( while [ -e $SOCKNAME -a ! -f mr-done ]
-#   do
-#     $TIMEOUT ../mrworker ../../mrapps/crash.so
-#     sleep 1
-#   done ) &
+( while [ -e $SOCKNAME -a ! -f mr-done ]
+  do
+    $TIMEOUT ../mrworker ../../mrapps/crash.so
+    sleep 1
+  done ) &
 
-# while [ -e $SOCKNAME -a ! -f mr-done ]
-# do
-#   $TIMEOUT ../mrworker ../../mrapps/crash.so
-#   sleep 1
-# done
-
-# https://zhuanlan.zhihu.com/p/425436525
-
-for i in `seq 1 30` 
+while [ -e $SOCKNAME -a ! -f mr-done ]
 do
-{
-	timeout -k 2s 180s ../mrworker ../../mrapps/crash.so
-}&
-done 
+  $TIMEOUT ../mrworker ../../mrapps/crash.so
+  sleep 1
+done
+
+# create many workers in advance when using tcp
+# because the above code check unixaddr, not tcp
+# https://zhuanlan.zhihu.com/p/425436525
+# https://zhuanlan.zhihu.com/p/425093684
+
+# for i in `seq 1 30` 
+# do
+# {
+# 	timeout -k 2s 180s ../mrworker ../../mrapps/crash.so
+# }&
+# done 
 
 wait
 
