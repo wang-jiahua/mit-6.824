@@ -91,7 +91,7 @@ func getTask() Assign {
 
 func doMap(mapf func(string, string) []KeyValue, assign Assign, report *Report) {
 	log.Println("doMap begin")
-	log.Println(assign)
+	//log.Println(assign)
 	filename := assign.Inputfiles[0]
 	content := mapRead(filename)
 	//log.Println("doMap 1111111111111111")
@@ -137,7 +137,7 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 		tmpfile, err := ioutil.TempFile(dir, "mr-tmp-*")
 		//log.Println("tmpfile", tmpfile)
 		if err != nil {
-			log.Println("err: ", err)
+			//log.Println("err: ", err)
 			log.Fatalf("cannot create temporary file: %v", tmpname)
 		}
 
@@ -166,7 +166,7 @@ func reduceRead(assign Assign) []KeyValue {
 	log.Println("reduceRead begin")
 	intermediate := []KeyValue{}
 	for _, filename := range assign.Inputfiles {
-		log.Println("filename: ", filename)
+		//log.Println("filename: ", filename)
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatalf("cannot open %v", filename)
@@ -197,7 +197,7 @@ func reduceRead(assign Assign) []KeyValue {
 
 func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue, assign Assign, report *Report) {
 	log.Println("reduceWrite begin")
-	log.Println("len(intermediate): ", len(intermediate))
+	//log.Println("len(intermediate): ", len(intermediate))
 	tmpname := "mr-out-tmp-" + strconv.Itoa(assign.ID)
 	dir, _ := os.Getwd()
 	tmpfile, err := ioutil.TempFile(dir, "mr-tmp-*")
@@ -231,7 +231,7 @@ func reportDone(args Report) {
 	log.Println("reportDone begin")
 	reply := Reply{}
 
-	log.Println("args: ", args)
+	//log.Println("args: ", args)
 
 	ok := call("Coordinator.MarkDone", &args, &reply)
 	if ok {

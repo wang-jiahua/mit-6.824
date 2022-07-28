@@ -164,7 +164,7 @@ fi
 
 wait
 
-exit
+#exit
 
 #########################################################
 echo '***' Starting reduce parallelism test.
@@ -188,6 +188,8 @@ else
 fi
 
 wait
+
+exit
 
 #########################################################
 echo '***' Starting job count test.

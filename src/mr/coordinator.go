@@ -120,12 +120,12 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) *Assign {
 // mark a task done, if all tasks are done, move to the next phase
 func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 	log.Println("MarkDone begin")
-	log.Println("args:", args)
+	//log.Println("args:", args)
 	mutex.Lock()
 	task := &c.tasks[args.ID]
 	c.doneChan <- task
 
-	log.Println("task: ", task)
+	//log.Println("task: ", task)
 
 	taskType := args.TaskType
 
@@ -148,7 +148,7 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 	// 	log.Println("MarkDone: ++++++++++++++++++")
 	// }
 	if taskType == Reduce && len(c.doneChan) == c.nReduce {
-		log.Println("reduce -> end")
+		//log.Println("reduce -> end")
 		c.phase = End
 	}
 	mutex.Unlock()
@@ -218,9 +218,9 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 func (c *Coordinator) prepMap(files []string) {
 	log.Println("prepMap begin")
 	for i, file := range files {
-		log.Println("file: ", file)
+		//log.Println("file: ", file)
 		task := Task{Map, []string{file}, Ready, i}
-		log.Println("task: ", task)
+		//log.Println("task: ", task)
 		//log.Println(&task)
 		c.tasks = append(c.tasks, task)
 		//log.Println(c.readyChan)
@@ -234,12 +234,12 @@ func (c *Coordinator) prepMap(files []string) {
 
 func (c *Coordinator) prepReduce() {
 	log.Println("prepReduce begin")
-	log.Println("c.intermediates: ", c.intermediates)
+	//log.Println("c.intermediates: ", c.intermediates)
 	for i := 0; i < c.nReduce; i++ {
 		files := []string{}
 		for _, intermediate := range c.intermediates {
 			if len(intermediate) > 0 {
-				log.Println("intermediate: ", intermediate)
+				//log.Println("intermediate: ", intermediate)
 				files = append(files, intermediate[i])
 			}
 
