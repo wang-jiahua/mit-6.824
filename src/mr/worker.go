@@ -46,7 +46,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 	for {
 		// ask the coordinator for a task
-		log.Println("Worker begin")
+		// log.Println("Worker begin")
 		assign := getTask()
 		//log.Println("Worker +++++++++++++")
 		report := Report{assign.TaskType, []string{}, assign.ID}
@@ -66,31 +66,31 @@ func Worker(mapf func(string, string) []KeyValue,
 		}
 
 		reportDone(report)
-		log.Println("Worker end")
+		//log.Println("Worker end")
 	}
 }
 
 func getTask() Assign {
-	log.Println("getTask begin")
+	//log.Println("getTask begin")
 	args := Args{}
 	reply := Assign{}
 
 	ok := call("Coordinator.AssignTask", &args, &reply)
 	if ok {
-		fmt.Printf("reply %v\n", reply)
+		// fmt.Printf("reply %v\n", reply)
 	} else {
 		fmt.Printf("call failed!\n")
 		// coordinator has exited
 		// work exits too
 		os.Exit(0)
 	}
-	log.Println("reply:", reply)
-	log.Println("getTask end")
+	//log.Println("reply:", reply)
+	//log.Println("getTask end")
 	return reply
 }
 
 func doMap(mapf func(string, string) []KeyValue, assign Assign, report *Report) {
-	log.Println("doMap begin")
+	//log.Println("doMap begin")
 	//log.Println(assign)
 	filename := assign.Inputfiles[0]
 	content := mapRead(filename)
@@ -98,7 +98,7 @@ func doMap(mapf func(string, string) []KeyValue, assign Assign, report *Report) 
 	kva := mapf(filename, string(content))
 	//log.Println("doMap 00000000000000000")
 	mapWrite(kva, assign, report)
-	log.Println("doMap end")
+	//log.Println("doMap end")
 }
 
 func mapRead(filename string) []byte {
@@ -115,7 +115,7 @@ func mapRead(filename string) []byte {
 }
 
 func mapWrite(kva []KeyValue, assign Assign, report *Report) {
-	log.Println("mapWrite begin")
+	//log.Println("mapWrite begin")
 	intermediates := [][]KeyValue{}
 	for i := 0; i < assign.ReduceNum; i++ {
 		intermediates = append(intermediates, []KeyValue{})
@@ -153,7 +153,7 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 		tmpfile.Close()
 		report.Outputfiles = append(report.Outputfiles, oname)
 	}
-	log.Println("mapWrite end")
+	// log.Println("mapWrite end")
 }
 
 func doReduce(reducef func(string, []string) string, assign Assign, report *Report) {
@@ -163,7 +163,7 @@ func doReduce(reducef func(string, []string) string, assign Assign, report *Repo
 }
 
 func reduceRead(assign Assign) []KeyValue {
-	log.Println("reduceRead begin")
+	// log.Println("reduceRead begin")
 	intermediate := []KeyValue{}
 	for _, filename := range assign.Inputfiles {
 		//log.Println("filename: ", filename)
@@ -191,12 +191,12 @@ func reduceRead(assign Assign) []KeyValue {
 		}
 		file.Close()
 	}
-	log.Println("reduceRead end")
+	// log.Println("reduceRead end")
 	return intermediate
 }
 
 func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue, assign Assign, report *Report) {
-	log.Println("reduceWrite begin")
+	// log.Println("reduceWrite begin")
 	//log.Println("len(intermediate): ", len(intermediate))
 	tmpname := "mr-out-tmp-" + strconv.Itoa(assign.ID)
 	dir, _ := os.Getwd()
@@ -224,22 +224,22 @@ func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue,
 	os.Rename(tmpfile.Name(), oname)
 	tmpfile.Close()
 	report.Outputfiles = append(report.Outputfiles, oname)
-	log.Println("reduceWrite end")
+	// log.Println("reduceWrite end")
 }
 
 func reportDone(args Report) {
-	log.Println("reportDone begin")
+	// log.Println("reportDone begin")
 	reply := Reply{}
 
 	//log.Println("args: ", args)
 
 	ok := call("Coordinator.MarkDone", &args, &reply)
 	if ok {
-		fmt.Printf("reply %v\n", reply)
+		// fmt.Printf("reply %v\n", reply)
 	} else {
 		fmt.Printf("reportDone call failed!\n")
 	}
-	log.Println("reportDone end")
+	// log.Println("reportDone end")
 }
 
 //
@@ -251,7 +251,7 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
 	//sockname := coordinatorSock()
 	//c, err := rpc.DialHTTP("unix", sockname)
-	log.Println("call begin")
+	// log.Println("call begin")
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
@@ -264,6 +264,6 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	}
 
 	fmt.Println(err)
-	log.Println("call end")
+	// log.Println("call end")
 	return false
 }

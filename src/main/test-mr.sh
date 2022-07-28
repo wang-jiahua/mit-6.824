@@ -216,7 +216,7 @@ fi
 
 wait
 
-exit
+#exit
 
 #########################################################
 # test whether any worker or coordinator exits before the
@@ -275,6 +275,8 @@ else
   failed_any=1
 fi
 rm -f mr-*
+
+#exit
 
 #########################################################
 echo '***' Starting crash test.

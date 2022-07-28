@@ -31,36 +31,39 @@ const (
 )
 
 func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
-	log.Println("AssignTask begin")
+	// log.Println("AssignTask begin")
+	mutex.Lock()
 	switch c.phase {
 	case MapPhase:
 		//reply.ID = 999
-		reply = c.retrieveTask(c.nMap, reply)
+		c.retrieveTask(c.nMap, reply)
 	case ReducePhase:
-		reply = c.retrieveTask(c.nReduce, reply)
+		c.retrieveTask(c.nReduce, reply)
 	case End:
 		// reply = &Assign{}
 		reply.TaskType = Exit
 	default:
 		panic("unreachable")
 	}
-	log.Println("reply: ", reply)
-	log.Println("AssignTask end")
+	// log.Println("reply: ", reply)
+	// log.Println("AssignTask end")
+	mutex.Unlock()
 	return nil
 }
 
-func (c *Coordinator) retrieveTask(cap int, reply *Assign) *Assign {
-	log.Println("retrieveTask begin")
+func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
+	// log.Println("retrieveTask begin")
+	//mutex.Lock()
 	var task *Task
 	if len(c.readyChan) > 0 {
-		log.Println("has unstarted tasks yet")
+		// log.Println("has unstarted tasks yet")
 		// has unstarted tasks yet
 		task = <-c.readyChan
 		task.status = Running
 		// c.tasks[task.id].status = Running
 	} else if len(c.doneChan) < cap {
 		// has running tasks yet
-		log.Println("has running tasks yet")
+		// log.Println("has running tasks yet")
 		task = &Task{}
 		task.taskType = Wait
 	} else {
@@ -76,9 +79,9 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) *Assign {
 	reply.Inputfiles = task.inputfiles
 	reply.ReduceNum = c.nReduce
 	reply.ID = task.id
-	log.Println("reply:", reply)
-	log.Println("retrieveTask end")
-	return reply
+	// log.Println("reply:", reply)
+	// log.Println("retrieveTask end")
+	//mutex.Unlock()
 }
 
 // func (c *Coordinator) retrieveMap() *Task {
@@ -119,7 +122,7 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) *Assign {
 
 // mark a task done, if all tasks are done, move to the next phase
 func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
-	log.Println("MarkDone begin")
+	// log.Println("MarkDone begin")
 	//log.Println("args:", args)
 	mutex.Lock()
 	task := &c.tasks[args.ID]
@@ -130,15 +133,18 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 	taskType := args.TaskType
 
 	if taskType == Map {
+		// log.Println("MarkDone map begin")
 		for _, file := range args.Outputfiles {
 			mapID := args.ID
 			c.intermediates[mapID] = append(c.intermediates[mapID], file)
 		}
 		if len(c.doneChan) == c.nMap {
+			// log.Println("MarkDone map -> reduce")
 			c.clearDone()
 			c.prepReduce()
 			c.phase = ReducePhase
 		}
+		// log.Println("MarkDone map end")
 	}
 
 	// if taskType == Map && len(c.doneChan) == c.nMap {
@@ -152,7 +158,7 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 		c.phase = End
 	}
 	mutex.Unlock()
-	log.Println("MarkDone end")
+	// log.Println("MarkDone end")
 	return nil
 }
 
@@ -160,7 +166,7 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 // start a thread that listens for RPCs from worker.go
 //
 func (c *Coordinator) server() {
-	log.Println("server starting")
+	// log.Println("server starting")
 	rpc.Register(c)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":1234")
@@ -180,7 +186,7 @@ func (c *Coordinator) server() {
 func (c *Coordinator) Done() bool {
 	mutex.Lock()
 	defer mutex.Unlock()
-	log.Println(c.phase == End)
+	// log.Println(c.phase == End)
 	return c.phase == End
 }
 
@@ -194,7 +200,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	// TODO: Your code here.
 
-	log.Println("making coordinator")
+	// log.Println("making coordinator")
 
 	c.nMap = len(files)
 	c.nReduce = nReduce
@@ -216,7 +222,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 }
 
 func (c *Coordinator) prepMap(files []string) {
-	log.Println("prepMap begin")
+	// log.Println("prepMap begin")
 	for i, file := range files {
 		//log.Println("file: ", file)
 		task := Task{Map, []string{file}, Ready, i}
@@ -229,11 +235,11 @@ func (c *Coordinator) prepMap(files []string) {
 		c.readyChan <- &task
 		// log.Println("preparing Map")
 	}
-	log.Println("prepMap end")
+	// log.Println("prepMap end")
 }
 
 func (c *Coordinator) prepReduce() {
-	log.Println("prepReduce begin")
+	// log.Println("prepReduce begin")
 	//log.Println("c.intermediates: ", c.intermediates)
 	for i := 0; i < c.nReduce; i++ {
 		files := []string{}
@@ -248,12 +254,13 @@ func (c *Coordinator) prepReduce() {
 		c.tasks = append(c.tasks, task)
 		c.readyChan <- &task
 	}
-	log.Println("prepReduce end")
+	// log.Println("prepReduce end")
 }
 
 func (c *Coordinator) clearDone() {
 	for len(c.doneChan) > 0 {
-		log.Println(<-c.doneChan)
+		<-c.doneChan
+		// log.Println(<-c.doneChan)
 	}
-	log.Println("clearDone")
+	// log.Println("clearDone")
 }
