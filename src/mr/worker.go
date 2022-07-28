@@ -47,6 +47,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	for {
 		// ask the coordinator for a task
 		// log.Println("Worker begin")
+		// log.Println("Worker", os.Getpid(), "is alive")
 		assign := getTask()
 		//log.Println("Worker +++++++++++++")
 		report := Report{assign.TaskType, []string{}, assign.ID}
@@ -79,12 +80,12 @@ func getTask() Assign {
 	if ok {
 		// fmt.Printf("reply %v\n", reply)
 	} else {
-		fmt.Printf("call failed!\n")
+		fmt.Printf("getTask call failed!\n")
 		// coordinator has exited
 		// work exits too
 		os.Exit(0)
 	}
-	//log.Println("reply:", reply)
+	// log.Println(os.Getpid(), "Assign reply:", reply)
 	//log.Println("getTask end")
 	return reply
 }
@@ -231,7 +232,7 @@ func reportDone(args Report) {
 	// log.Println("reportDone begin")
 	reply := Reply{}
 
-	//log.Println("args: ", args)
+	// log.Println(os.Getpid(), "reportDone args: ", args)
 
 	ok := call("Coordinator.MarkDone", &args, &reply)
 	if ok {

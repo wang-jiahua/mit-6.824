@@ -7,6 +7,7 @@ import (
 	"net/rpc"
 	"os"
 	"sync"
+	"time"
 )
 
 var mutex sync.Mutex
@@ -33,6 +34,7 @@ const (
 func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
 	// log.Println("AssignTask begin")
 	mutex.Lock()
+	// log.Println("AssignTask lock")
 	switch c.phase {
 	case MapPhase:
 		//reply.ID = 999
@@ -45,13 +47,15 @@ func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
 	default:
 		panic("unreachable")
 	}
-	// log.Println("reply: ", reply)
+	// log.Println("AssignTask reply", reply)
 	// log.Println("AssignTask end")
+	// log.Println("AssignTask unlock")
 	mutex.Unlock()
 	return nil
 }
 
 func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
+	// log.Println("")
 	// log.Println("retrieveTask begin")
 	//mutex.Lock()
 	var task *Task
@@ -60,7 +64,11 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
 		// has unstarted tasks yet
 		task = <-c.readyChan
 		task.status = Running
+		c.tasks[task.id].status = Running
+		// log.Println("retrieveTask task            ", task)
+		// log.Println("retrieveTask c.tasks[task.id]", c.tasks[task.id])
 		// c.tasks[task.id].status = Running
+		go c.countdown(task)
 	} else if len(c.doneChan) < cap {
 		// has running tasks yet
 		// log.Println("has running tasks yet")
@@ -81,7 +89,26 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
 	reply.ID = task.id
 	// log.Println("reply:", reply)
 	// log.Println("retrieveTask end")
+	// log.Println("")
 	//mutex.Unlock()
+}
+
+func (c *Coordinator) countdown(task *Task) {
+	time.Sleep(20 * time.Second)
+	mutex.Lock()
+	// log.Println("")
+	//log.Println("countdown lock")
+	if c.tasks[task.id].status == Running {
+
+		// log.Println("countdown recycle task", task)
+		// log.Println("countdown recycle c.tasks[task.id]", c.tasks[task.id])
+
+		task.status = Ready
+		c.readyChan <- task
+	}
+	//log.Println("countdown unlock")
+	// log.Println("")
+	mutex.Unlock()
 }
 
 // func (c *Coordinator) retrieveMap() *Task {
@@ -122,15 +149,26 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
 
 // mark a task done, if all tasks are done, move to the next phase
 func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
+	// log.Println("")
 	// log.Println("MarkDone begin")
-	//log.Println("args:", args)
+	// log.Println("MarkDone args", args)
 	mutex.Lock()
+	// log.Println("MarkDone lock")
 	task := &c.tasks[args.ID]
+	// log.Println("MarkDone task before update", task)
+	// log.Println("MarkDone c.tasks[args.ID] before update", c.tasks[args.ID])
+	task.status = Done
+	// log.Println("MarkDone task after update", task)
+	// log.Println("MarkDone c.tasks[args.ID] after update", c.tasks[args.ID])
+	// log.Println("MarkDone len(c.doneChan)", len(c.doneChan))
 	c.doneChan <- task
+	// log.Println("MarkDone -----------------------------------------")
 
 	//log.Println("task: ", task)
 
 	taskType := args.TaskType
+
+	// log.Println("MarkDone +++++++++++++++++++++++++++++++++++++++++")
 
 	if taskType == Map {
 		// log.Println("MarkDone map begin")
@@ -153,12 +191,16 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 
 	// 	log.Println("MarkDone: ++++++++++++++++++")
 	// }
+	// log.Println("MarkDone ***********************************")
+
 	if taskType == Reduce && len(c.doneChan) == c.nReduce {
-		//log.Println("reduce -> end")
+		// log.Println("MarkDone reduce -> end")
 		c.phase = End
 	}
+	// log.Println("MarkDone unlock")
 	mutex.Unlock()
 	// log.Println("MarkDone end")
+	// log.Println("")
 	return nil
 }
 
@@ -239,6 +281,7 @@ func (c *Coordinator) prepMap(files []string) {
 }
 
 func (c *Coordinator) prepReduce() {
+	// log.Println("")
 	// log.Println("prepReduce begin")
 	//log.Println("c.intermediates: ", c.intermediates)
 	for i := 0; i < c.nReduce; i++ {
@@ -255,6 +298,7 @@ func (c *Coordinator) prepReduce() {
 		c.readyChan <- &task
 	}
 	// log.Println("prepReduce end")
+	// log.Println("")
 }
 
 func (c *Coordinator) clearDone() {
