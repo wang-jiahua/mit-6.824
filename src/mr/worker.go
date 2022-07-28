@@ -56,6 +56,7 @@ func Worker(mapf func(string, string) []KeyValue,
 			return
 		case Wait:
 			time.Sleep(time.Second)
+			continue
 		case Map:
 			doMap(mapf, assign, &report)
 		case Reduce:

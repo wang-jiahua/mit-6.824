@@ -58,14 +58,18 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) *Assign {
 		task = <-c.readyChan
 		task.status = Running
 		// c.tasks[task.id].status = Running
-	} else if len(c.doneChan) < c.nMap {
+	} else if len(c.doneChan) < cap {
 		// has running tasks yet
 		log.Println("has running tasks yet")
 		task = &Task{}
 		task.taskType = Wait
 	} else {
 		// impossible, should be next phase
-		log.Println(reply)
+		log.Println("c.phase: ", c.phase)
+		log.Println("cap: ", cap)
+		log.Println("len(c.readyChan): ", len(c.readyChan))
+		log.Println("len(c.doneChan): ", len(c.doneChan))
+		log.Println("reply: ", reply)
 		panic("Task")
 	}
 	reply.TaskType = task.taskType
@@ -234,7 +238,7 @@ func (c *Coordinator) prepReduce() {
 	for i := 0; i < c.nReduce; i++ {
 		files := []string{}
 		for _, intermediate := range c.intermediates {
-			if intermediate != nil {
+			if len(intermediate) > 0 {
 				log.Println("intermediate: ", intermediate)
 				files = append(files, intermediate[i])
 			}
