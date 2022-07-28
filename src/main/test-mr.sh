@@ -189,7 +189,7 @@ fi
 
 wait
 
-exit
+#exit
 
 #########################################################
 echo '***' Starting job count test.
@@ -215,6 +215,8 @@ else
 fi
 
 wait
+
+exit
 
 #########################################################
 # test whether any worker or coordinator exits before the
