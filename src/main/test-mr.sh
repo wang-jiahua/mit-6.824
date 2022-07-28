@@ -100,7 +100,7 @@ fi
 # wait for remaining workers and coordinator to exit.
 wait
 
-exit
+#exit
 
 #########################################################
 # now indexer
@@ -131,6 +131,8 @@ else
 fi
 
 wait
+
+exit
 
 #########################################################
 echo '***' Starting map parallelism test.
