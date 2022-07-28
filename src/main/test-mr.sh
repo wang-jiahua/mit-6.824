@@ -132,7 +132,7 @@ fi
 
 wait
 
-exit
+#exit
 
 #########################################################
 echo '***' Starting map parallelism test.
@@ -164,6 +164,7 @@ fi
 
 wait
 
+exit
 
 #########################################################
 echo '***' Starting reduce parallelism test.
