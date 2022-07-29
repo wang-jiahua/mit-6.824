@@ -69,20 +69,26 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
 		// log.Println("retrieveTask c.tasks[task.id]", c.tasks[task.id])
 		// c.tasks[task.id].status = Running
 		go c.countdown(task)
-	} else if len(c.doneChan) < cap {
-		// has running tasks yet
-		// log.Println("has running tasks yet")
+	} else {
+		// has no unstarted tasks yet
 		task = &Task{}
 		task.taskType = Wait
-	} else {
-		// impossible, should be next phase
-		log.Println("c.phase: ", c.phase)
-		log.Println("cap: ", cap)
-		log.Println("len(c.readyChan): ", len(c.readyChan))
-		log.Println("len(c.doneChan): ", len(c.doneChan))
-		log.Println("reply: ", reply)
-		panic("Task")
 	}
+
+	// if len(c.doneChan) < cap {
+	// 	// has running tasks yet
+	// 	// log.Println("has running tasks yet")
+	// 	task = &Task{}
+	// 	task.taskType = Wait
+	// } else {
+	// 	// impossible, should be next phase
+	// 	log.Println("c.phase: ", c.phase)
+	// 	log.Println("cap: ", cap)
+	// 	log.Println("len(c.readyChan): ", len(c.readyChan))
+	// 	log.Println("len(c.doneChan): ", len(c.doneChan))
+	// 	log.Println("reply: ", reply)
+	// 	panic("Task")
+	// }
 	reply.TaskType = task.taskType
 	reply.Inputfiles = task.inputfiles
 	reply.ReduceNum = c.nReduce
@@ -102,9 +108,10 @@ func (c *Coordinator) countdown(task *Task) {
 
 		// log.Println("countdown recycle task", task)
 		// log.Println("countdown recycle c.tasks[task.id]", c.tasks[task.id])
-
+		c.tasks[task.id].status = Ready
 		task.status = Ready
-		c.readyChan <- task
+		// c.readyChan <- task
+		c.readyChan <- &c.tasks[task.id]
 	}
 	//log.Println("countdown unlock")
 	// log.Println("")
@@ -157,20 +164,23 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 	task := &c.tasks[args.ID]
 	// log.Println("MarkDone task before update", task)
 	// log.Println("MarkDone c.tasks[args.ID] before update", c.tasks[args.ID])
+	if task.status == Done {
+		// log.Println("MarkDone the task is already done")
+		mutex.Unlock()
+		return nil
+	}
 	task.status = Done
+	c.tasks[args.ID].status = Done
 	// log.Println("MarkDone task after update", task)
 	// log.Println("MarkDone c.tasks[args.ID] after update", c.tasks[args.ID])
-	// log.Println("MarkDone len(c.doneChan)", len(c.doneChan))
 	c.doneChan <- task
-	// log.Println("MarkDone -----------------------------------------")
-
-	//log.Println("task: ", task)
+	// log.Println("MarkDone len(c.doneChan)", len(c.doneChan))
+	// log.Println("MarkDone task", task)
+	// log.Println("MarkDone c.phase", c.phase)
 
 	taskType := args.TaskType
 
-	// log.Println("MarkDone +++++++++++++++++++++++++++++++++++++++++")
-
-	if taskType == Map {
+	if taskType == Map && c.phase == MapPhase {
 		// log.Println("MarkDone map begin")
 		for _, file := range args.Outputfiles {
 			mapID := args.ID
@@ -185,15 +195,7 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 		// log.Println("MarkDone map end")
 	}
 
-	// if taskType == Map && len(c.doneChan) == c.nMap {
-	// 	// move to ReducePhase
-	// 	log.Println("MarkDone: ------------------")
-
-	// 	log.Println("MarkDone: ++++++++++++++++++")
-	// }
-	// log.Println("MarkDone ***********************************")
-
-	if taskType == Reduce && len(c.doneChan) == c.nReduce {
+	if taskType == Reduce && c.phase == ReducePhase && len(c.doneChan) == c.nReduce {
 		// log.Println("MarkDone reduce -> end")
 		c.phase = End
 	}
@@ -284,6 +286,7 @@ func (c *Coordinator) prepReduce() {
 	// log.Println("")
 	// log.Println("prepReduce begin")
 	//log.Println("c.intermediates: ", c.intermediates)
+	c.tasks = []Task{}
 	for i := 0; i < c.nReduce; i++ {
 		files := []string{}
 		for _, intermediate := range c.intermediates {

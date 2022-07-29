@@ -49,7 +49,6 @@ func Worker(mapf func(string, string) []KeyValue,
 		// log.Println("Worker begin")
 		// log.Println("Worker", os.Getpid(), "is alive")
 		assign := getTask()
-		//log.Println("Worker +++++++++++++")
 		report := Report{assign.TaskType, []string{}, assign.ID}
 
 		switch assign.TaskType {
@@ -95,9 +94,7 @@ func doMap(mapf func(string, string) []KeyValue, assign Assign, report *Report) 
 	//log.Println(assign)
 	filename := assign.Inputfiles[0]
 	content := mapRead(filename)
-	//log.Println("doMap 1111111111111111")
 	kva := mapf(filename, string(content))
-	//log.Println("doMap 00000000000000000")
 	mapWrite(kva, assign, report)
 	//log.Println("doMap end")
 }
@@ -121,7 +118,6 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 	for i := 0; i < assign.ReduceNum; i++ {
 		intermediates = append(intermediates, []KeyValue{})
 	}
-	// log.Println("mapWrite 2222222222222")
 	for _, kv := range kva {
 		//log.Println(i)
 		key := kv.Key
@@ -130,7 +126,6 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 		//log.Println(reduceID)
 		//log.Println(intermediates[reduceID])
 	}
-	// log.Println("mapWrite 3333333333333333")
 	for reduceID, intermediate := range intermediates {
 		tmpname := "mr-tmp-" + strconv.Itoa(assign.ID) + "-" + strconv.Itoa(reduceID)
 		//log.Println("tmpname", tmpname)
@@ -256,7 +251,6 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
-	//log.Println("call: ----------------")
 	defer c.Close()
 
 	err = c.Call(rpcname, args, reply)
