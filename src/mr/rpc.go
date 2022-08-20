@@ -19,8 +19,6 @@ type Reply struct {
 	Y int
 }
 
-// TODO: Add your RPC definitions here.
-
 type Task struct {
 	taskType   TaskType
 	inputfiles []string

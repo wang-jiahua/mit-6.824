@@ -13,7 +13,6 @@ import (
 var mutex sync.Mutex
 
 type Coordinator struct {
-	// TODO: Your definitions here.
 	readyChan     chan *Task
 	doneChan      chan *Task
 	phase         Phase
@@ -38,9 +37,9 @@ func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
 	switch c.phase {
 	case MapPhase:
 		//reply.ID = 999
-		c.retrieveTask(c.nMap, reply)
+		c.retrieveTask(reply)
 	case ReducePhase:
-		c.retrieveTask(c.nReduce, reply)
+		c.retrieveTask(reply)
 	case End:
 		// reply = &Assign{}
 		reply.TaskType = Exit
@@ -54,10 +53,9 @@ func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
 	return nil
 }
 
-func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
+func (c *Coordinator) retrieveTask(reply *Assign) {
 	// log.Println("")
 	// log.Println("retrieveTask begin")
-	//mutex.Lock()
 	var task *Task
 	if len(c.readyChan) > 0 {
 		// log.Println("has unstarted tasks yet")
@@ -74,21 +72,6 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
 		task = &Task{}
 		task.taskType = Wait
 	}
-
-	// if len(c.doneChan) < cap {
-	// 	// has running tasks yet
-	// 	// log.Println("has running tasks yet")
-	// 	task = &Task{}
-	// 	task.taskType = Wait
-	// } else {
-	// 	// impossible, should be next phase
-	// 	log.Println("c.phase: ", c.phase)
-	// 	log.Println("cap: ", cap)
-	// 	log.Println("len(c.readyChan): ", len(c.readyChan))
-	// 	log.Println("len(c.doneChan): ", len(c.doneChan))
-	// 	log.Println("reply: ", reply)
-	// 	panic("Task")
-	// }
 	reply.TaskType = task.taskType
 	reply.Inputfiles = task.inputfiles
 	reply.ReduceNum = c.nReduce
@@ -96,16 +79,14 @@ func (c *Coordinator) retrieveTask(cap int, reply *Assign) {
 	// log.Println("reply:", reply)
 	// log.Println("retrieveTask end")
 	// log.Println("")
-	//mutex.Unlock()
 }
 
 func (c *Coordinator) countdown(task *Task) {
 	time.Sleep(20 * time.Second)
 	mutex.Lock()
 	// log.Println("")
-	//log.Println("countdown lock")
+	// log.Println("countdown lock")
 	if c.tasks[task.id].status == Running {
-
 		// log.Println("countdown recycle task", task)
 		// log.Println("countdown recycle c.tasks[task.id]", c.tasks[task.id])
 		c.tasks[task.id].status = Ready
@@ -113,48 +94,15 @@ func (c *Coordinator) countdown(task *Task) {
 		// c.readyChan <- task
 		c.readyChan <- &c.tasks[task.id]
 	}
-	//log.Println("countdown unlock")
+	// log.Println("countdown unlock")
 	// log.Println("")
 	mutex.Unlock()
 }
 
-// func (c *Coordinator) retrieveMap() *Task {
-// 	var task *Task
-// 	if len(c.mapReady) > 0 {
-// 		// has unstarted tasks yet
-// 		task = <-c.mapReady
-// 		task.status = Running
-// 		c.tasks[task.id].status = Running
-// 	} else if len(c.mapDone) < c.nMap {
-// 		// has running tasks yet
-// 		task = &Task{}
-// 		task.taskType = Wait
-// 	} else {
-// 		// impossible, should be next phase
-// 		panic("Task")
-// 	}
-// 	return task
-// }
-
-// func (c *Coordinator) retrieveReduce() *Task {
-// 	var task *Task
-// 	if len(c.reduceReady) > 0 {
-// 		// has unstarted tasks yet
-// 		task = <-c.reduceReady
-// 		task.status = Running
-// 		c.tasks[task.id].status = Running
-// 	} else if len(c.reduceDone) < c.nReduce {
-// 		// has running tasks yet
-// 		task = &Task{}
-// 		task.taskType = Wait
-// 	} else {
-// 		// impossible, should be next phase
-// 		panic("Task")
-// 	}
-// 	return task
-// }
-
+//
+// MarkDone
 // mark a task done, if all tasks are done, move to the next phase
+//
 func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 	// log.Println("")
 	// log.Println("MarkDone begin")
@@ -211,19 +159,31 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 //
 func (c *Coordinator) server() {
 	// log.Println("server starting")
-	rpc.Register(c)
+	err := rpc.Register(c)
+	if err != nil {
+		return
+	}
 	rpc.HandleHTTP()
 	// l, e := net.Listen("tcp", ":1234")
 	sockname := coordinatorSock()
-	os.Remove(sockname)
+	err = os.Remove(sockname)
+	if err != nil {
+		return
+	}
 	l, e := net.Listen("unix", sockname)
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
-	go http.Serve(l, nil)
+	go func() {
+		err := http.Serve(l, nil)
+		if err != nil {
+
+		}
+	}()
 }
 
 //
+// Done
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
 //
@@ -235,25 +195,22 @@ func (c *Coordinator) Done() bool {
 }
 
 //
+// MakeCoordinator
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
-
-	// TODO: Your code here.
-
 	// log.Println("making coordinator")
-
 	c.nMap = len(files)
 	c.nReduce = nReduce
-	cap := c.nMap
-	if c.nReduce > cap {
-		cap = c.nReduce
+	capacity := c.nMap
+	if c.nReduce > capacity {
+		capacity = c.nReduce
 	}
-	c.readyChan = make(chan *Task, cap)
-	c.doneChan = make(chan *Task, cap)
+	c.readyChan = make(chan *Task, capacity)
+	c.doneChan = make(chan *Task, capacity)
 
 	for i := 0; i < c.nMap; i++ {
 		c.intermediates = append(c.intermediates, []string{})
@@ -268,14 +225,14 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 func (c *Coordinator) prepMap(files []string) {
 	// log.Println("prepMap begin")
 	for i, file := range files {
-		//log.Println("file: ", file)
+		// log.Println("file: ", file)
 		task := Task{Map, []string{file}, Ready, i}
-		//log.Println("task: ", task)
-		//log.Println(&task)
+		// log.Println("task: ", task)
+		// log.Println(&task)
 		c.tasks = append(c.tasks, task)
-		//log.Println(c.readyChan)
-		//log.Println(len(c.readyChan))
-		//log.Println(cap(c.readyChan))
+		// log.Println(c.readyChan)
+		// log.Println(len(c.readyChan))
+		// log.Println(cap(c.readyChan))
 		c.readyChan <- &task
 		// log.Println("preparing Map")
 	}
@@ -285,13 +242,13 @@ func (c *Coordinator) prepMap(files []string) {
 func (c *Coordinator) prepReduce() {
 	// log.Println("")
 	// log.Println("prepReduce begin")
-	//log.Println("c.intermediates: ", c.intermediates)
+	// log.Println("c.intermediates: ", c.intermediates)
 	c.tasks = []Task{}
 	for i := 0; i < c.nReduce; i++ {
-		files := []string{}
+		var files []string
 		for _, intermediate := range c.intermediates {
 			if len(intermediate) > 0 {
-				//log.Println("intermediate: ", intermediate)
+				// log.Println("intermediate: ", intermediate)
 				files = append(files, intermediate[i])
 			}
 
