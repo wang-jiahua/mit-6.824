@@ -171,6 +171,7 @@ func (c *Coordinator) server() {
 	// log.Println("server starting")
 	err := rpc.Register(c)
 	if err != nil {
+		log.Println("error rpc.Register(c)")
 		return
 	}
 	rpc.HandleHTTP()
@@ -178,7 +179,7 @@ func (c *Coordinator) server() {
 	sockname := coordinatorSock()
 	err = os.Remove(sockname)
 	if err != nil {
-		return
+		log.Println("error os.Remove(sockname)")
 	}
 	l, e := net.Listen("unix", sockname)
 	if e != nil {
@@ -187,7 +188,7 @@ func (c *Coordinator) server() {
 	go func() {
 		err := http.Serve(l, nil)
 		if err != nil {
-
+			log.Println("error http.Serve(l, nil)")
 		}
 	}()
 }

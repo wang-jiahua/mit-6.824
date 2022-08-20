@@ -46,6 +46,7 @@ func ihash(key string) int {
 	h := fnv.New32a()
 	_, err := h.Write([]byte(key))
 	if err != nil {
+		log.Println("error h.Write([]byte(key))")
 		return 0
 	}
 	return int(h.Sum32() & 0x7fffffff)
@@ -134,6 +135,7 @@ func mapRead(filename string) []byte {
 	}
 	err = file.Close()
 	if err != nil {
+		log.Println("error file.Close()")
 		return nil
 	}
 	return content
@@ -164,7 +166,6 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 		tmpfile, err := ioutil.TempFile(dir, "mr-tmp-*")
 		// log.Println("tmpfile", tmpfile)
 		if err != nil {
-			// log.Println("err: ", err)
 			log.Fatalf("cannot create temporary file: %v", tmpname)
 		}
 
@@ -178,10 +179,12 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 		oname := "mr-" + strconv.Itoa(assign.ID) + "-" + strconv.Itoa(reduceID)
 		err = os.Rename(tmpfile.Name(), oname)
 		if err != nil {
+			log.Println("error os.Rename(tmpfile.Name(), oname)")
 			return
 		}
 		err = tmpfile.Close()
 		if err != nil {
+			log.Println("error tmpfile.Close()")
 			return
 		}
 		report.Outputfiles = append(report.Outputfiles, oname)
@@ -224,7 +227,6 @@ func reduceRead(assign Assign) []KeyValue {
 		for {
 			var kv KeyValue
 			if err := dec.Decode(&kv); err != nil {
-				//log.Println("err: ", err)
 				break
 			}
 			// log.Println("kv: ", kv)
@@ -232,6 +234,7 @@ func reduceRead(assign Assign) []KeyValue {
 		}
 		err = file.Close()
 		if err != nil {
+			log.Println("error file.Close()")
 			return nil
 		}
 	}
@@ -267,6 +270,7 @@ func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue,
 		// fmt.Printf("%v %v\n", intermediate[i].Key, output)
 		_, err := fmt.Fprintf(tmpfile, "%v %v\n", intermediate[i].Key, output)
 		if err != nil {
+			log.Println("error fmt.Fprintf(tmpfile, \"%v %v\\n\", intermediate[i].Key, output)")
 			return
 		}
 		i = j
@@ -274,10 +278,12 @@ func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue,
 	oname := "mr-out-" + strconv.Itoa(assign.ID)
 	err = os.Rename(tmpfile.Name(), oname)
 	if err != nil {
+		log.Println("error os.Rename(tmpfile.Name(), oname)")
 		return
 	}
 	err = tmpfile.Close()
 	if err != nil {
+		log.Println("error tmpfile.Close()")
 		return
 	}
 	report.Outputfiles = append(report.Outputfiles, oname)
@@ -320,7 +326,7 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	defer func(c *rpc.Client) {
 		err := c.Close()
 		if err != nil {
-
+			log.Println("call c.Close error")
 		}
 	}(c)
 
