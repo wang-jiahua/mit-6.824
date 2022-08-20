@@ -13,13 +13,13 @@ import (
 var mutex sync.Mutex
 
 type Coordinator struct {
-	readyChan     chan *Task
-	doneChan      chan *Task
-	phase         Phase
-	tasks         []Task
-	nMap          int
-	nReduce       int
-	intermediates [][]string // map output, reduce input
+	readyChan     chan *Task // to store tasks ready to be assigned
+	doneChan      chan *Task // to store tasks done
+	phase         Phase      // either MapPhase or ReducePhase or End
+	tasks         []Task     // all tasks
+	nMap          int        // the number of map tasks
+	nReduce       int        // the number of reduce tasks
+	intermediates [][]string // map procedure's output, reduce procedure's input
 }
 
 type Phase int
@@ -30,18 +30,20 @@ const (
 	End
 )
 
+//
+// AssignTask
+// assign a task to a worker via RPC.
+//
 func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
 	// log.Println("AssignTask begin")
 	mutex.Lock()
 	// log.Println("AssignTask lock")
 	switch c.phase {
 	case MapPhase:
-		//reply.ID = 999
 		c.retrieveTask(reply)
 	case ReducePhase:
 		c.retrieveTask(reply)
 	case End:
-		// reply = &Assign{}
 		reply.TaskType = Exit
 	default:
 		panic("unreachable")
@@ -53,6 +55,10 @@ func (c *Coordinator) AssignTask(args *Args, reply *Assign) error {
 	return nil
 }
 
+//
+// retrieveTask
+// retrieve a task from the ready queue
+//
 func (c *Coordinator) retrieveTask(reply *Assign) {
 	// log.Println("")
 	// log.Println("retrieveTask begin")
@@ -65,7 +71,6 @@ func (c *Coordinator) retrieveTask(reply *Assign) {
 		c.tasks[task.id].status = Running
 		// log.Println("retrieveTask task            ", task)
 		// log.Println("retrieveTask c.tasks[task.id]", c.tasks[task.id])
-		// c.tasks[task.id].status = Running
 		go c.countdown(task)
 	} else {
 		// has no unstarted tasks yet
@@ -81,6 +86,10 @@ func (c *Coordinator) retrieveTask(reply *Assign) {
 	// log.Println("")
 }
 
+//
+// countdown
+// wait for several seconds and recycle the assigned task to readyChan
+//
 func (c *Coordinator) countdown(task *Task) {
 	time.Sleep(20 * time.Second)
 	mutex.Lock()
@@ -155,6 +164,7 @@ func (c *Coordinator) MarkDone(args *Report, reply *Reply) error {
 }
 
 //
+// server
 // start a thread that listens for RPCs from worker.go
 //
 func (c *Coordinator) server() {
@@ -222,6 +232,10 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	return &c
 }
 
+//
+// prepMap
+// fill the readyChan with map tasks
+//
 func (c *Coordinator) prepMap(files []string) {
 	// log.Println("prepMap begin")
 	for i, file := range files {
@@ -239,6 +253,10 @@ func (c *Coordinator) prepMap(files []string) {
 	// log.Println("prepMap end")
 }
 
+//
+// prepReduce
+// fill the readyChan with reduce tasks
+//
 func (c *Coordinator) prepReduce() {
 	// log.Println("")
 	// log.Println("prepReduce begin")
@@ -261,6 +279,10 @@ func (c *Coordinator) prepReduce() {
 	// log.Println("")
 }
 
+//
+// clearDone
+// clear the doneChan
+//
 func (c *Coordinator) clearDone() {
 	for len(c.doneChan) > 0 {
 		<-c.doneChan

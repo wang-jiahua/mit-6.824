@@ -19,6 +19,9 @@ type Reply struct {
 	Y int
 }
 
+//
+// Task information the coordinator keeps track of.
+//
 type Task struct {
 	taskType   TaskType
 	inputfiles []string
@@ -43,6 +46,10 @@ const (
 	Done
 )
 
+//
+// Assign
+// Tell the coordinator which task to do.
+//
 type Assign struct {
 	TaskType   TaskType
 	Inputfiles []string
@@ -50,6 +57,10 @@ type Assign struct {
 	ID         int
 }
 
+//
+// Report
+// Tell the coordinator some task is done.
+//
 type Report struct {
 	TaskType    TaskType
 	Outputfiles []string

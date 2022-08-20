@@ -29,6 +29,7 @@ func (a ByKey) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 // for sorting by key.
 func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
+//
 // KeyValue
 // Map functions return a slice of KeyValue.
 //
@@ -78,12 +79,16 @@ func Worker(mapf func(string, string) []KeyValue,
 		}
 
 		reportDone(report)
-		//log.Println("Worker end")
+		// log.Println("Worker end")
 	}
 }
 
+//
+// getTask
+// get a task from the coordinator via RPC.
+//
 func getTask() Assign {
-	//log.Println("getTask begin")
+	// log.Println("getTask begin")
 	args := Args{}
 	reply := Assign{}
 
@@ -92,25 +97,32 @@ func getTask() Assign {
 		// fmt.Printf("reply %v\n", reply)
 	} else {
 		fmt.Printf("getTask call failed!\n")
-		// coordinator has exited
-		// work exits too
+		// if the coordinator has exited, the work exits too
 		os.Exit(0)
 	}
 	// log.Println(os.Getpid(), "Assign reply:", reply)
-	//log.Println("getTask end")
+	// log.Println("getTask end")
 	return reply
 }
 
+//
+// doMap
+// the map procedure
+//
 func doMap(mapf func(string, string) []KeyValue, assign Assign, report *Report) {
-	//log.Println("doMap begin")
-	//log.Println(assign)
+	// log.Println("doMap begin")
+	// log.Println(assign)
 	filename := assign.Inputfiles[0]
 	content := mapRead(filename)
 	kva := mapf(filename, string(content))
 	mapWrite(kva, assign, report)
-	//log.Println("doMap end")
+	// log.Println("doMap end")
 }
 
+//
+// mapRead
+// read input files in the map procedure
+//
 func mapRead(filename string) []byte {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -127,28 +139,32 @@ func mapRead(filename string) []byte {
 	return content
 }
 
+//
+// mapWrite
+// write output files in the map procedure
+//
 func mapWrite(kva []KeyValue, assign Assign, report *Report) {
-	//log.Println("mapWrite begin")
+	// log.Println("mapWrite begin")
 	var intermediates [][]KeyValue
 	for i := 0; i < assign.ReduceNum; i++ {
 		intermediates = append(intermediates, []KeyValue{})
 	}
 	for _, kv := range kva {
-		//log.Println(i)
+		// log.Println(i)
 		key := kv.Key
 		reduceID := ihash(key) % assign.ReduceNum
 		intermediates[reduceID] = append(intermediates[reduceID], kv)
-		//log.Println(reduceID)
-		//log.Println(intermediates[reduceID])
+		// log.Println(reduceID)
+		// log.Println(intermediates[reduceID])
 	}
 	for reduceID, intermediate := range intermediates {
 		tmpname := "mr-tmp-" + strconv.Itoa(assign.ID) + "-" + strconv.Itoa(reduceID)
-		//log.Println("tmpname", tmpname)
+		// log.Println("tmpname", tmpname)
 		dir, _ := os.Getwd()
 		tmpfile, err := ioutil.TempFile(dir, "mr-tmp-*")
-		//log.Println("tmpfile", tmpfile)
+		// log.Println("tmpfile", tmpfile)
 		if err != nil {
-			//log.Println("err: ", err)
+			// log.Println("err: ", err)
 			log.Fatalf("cannot create temporary file: %v", tmpname)
 		}
 
@@ -173,24 +189,32 @@ func mapWrite(kva []KeyValue, assign Assign, report *Report) {
 	// log.Println("mapWrite end")
 }
 
+//
+// doReduce
+// the reduce procedure
+//
 func doReduce(reducef func(string, []string) string, assign Assign, report *Report) {
 	intermediate := reduceRead(assign)
 	sort.Sort(ByKey(intermediate))
 	reduceWrite(reducef, intermediate, assign, report)
 }
 
+//
+// reduceRead
+// read input files in the reduce procedure
+//
 func reduceRead(assign Assign) []KeyValue {
 	// log.Println("reduceRead begin")
 	var intermediate []KeyValue
 	for _, filename := range assign.Inputfiles {
-		//log.Println("filename: ", filename)
+		// log.Println("filename: ", filename)
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatalf("cannot open %v", filename)
 		}
 		// content, err := ioutil.ReadAll(file)
 		// if content != nil {
-		// 	log.Println("content is not empty")
+		// log.Println("content is not empty")
 		// }
 
 		if err != nil {
@@ -203,7 +227,7 @@ func reduceRead(assign Assign) []KeyValue {
 				//log.Println("err: ", err)
 				break
 			}
-			//log.Println("kv: ", kv)
+			// log.Println("kv: ", kv)
 			intermediate = append(intermediate, kv)
 		}
 		err = file.Close()
@@ -215,6 +239,10 @@ func reduceRead(assign Assign) []KeyValue {
 	return intermediate
 }
 
+//
+// reduceWrite
+// write output files in the reduce procedure
+//
 func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue, assign Assign, report *Report) {
 	// log.Println("reduceWrite begin")
 	// log.Println("len(intermediate): ", len(intermediate))
@@ -236,7 +264,7 @@ func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue,
 			values = append(values, intermediate[k].Value)
 		}
 		output := reducef(intermediate[i].Key, values)
-		//fmt.Printf("%v %v\n", intermediate[i].Key, output)
+		// fmt.Printf("%v %v\n", intermediate[i].Key, output)
 		_, err := fmt.Fprintf(tmpfile, "%v %v\n", intermediate[i].Key, output)
 		if err != nil {
 			return
@@ -256,6 +284,10 @@ func reduceWrite(reducef func(string, []string) string, intermediate []KeyValue,
 	// log.Println("reduceWrite end")
 }
 
+//
+// reportDone
+// report the task has done to the coordinator via RPC.
+//
 func reportDone(args Report) {
 	// log.Println("reportDone begin")
 	reply := Reply{}
@@ -272,6 +304,7 @@ func reportDone(args Report) {
 }
 
 //
+// call
 // send an RPC request to the coordinator, wait for the response.
 // usually returns true.
 // returns false if something goes wrong.
